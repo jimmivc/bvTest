@@ -2,16 +2,20 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"goji.io"
+	"goji.io/pat"
+	"net/http"
 )
 
 type Song struct {
-	id int `db:"id" json:"id"`
-	artist string `db:"artist" json:"artist"`
-	song string `db:"song" json:"song"`
-	genre int `db:"genre" json:"genre"`
-	length int `db:"length" json:"length"`
+	Id int `json:"id"`
+	Artist string `json:"artist"`
+	Song string `json:"song"`
+	Genre int `json:"genre"`
+	Length int `json:"length"`
 }
 
 //func (s Song) Scan(src interface{})error{
@@ -23,7 +27,7 @@ type Song struct {
 //	}
 //}
 
-func main() {
+func getSongs(w http.ResponseWriter,r *http.Request) {
 	db, _ := sql.Open("sqlite3","./db/jrdd.db")
 
 	//var artist string
@@ -31,8 +35,10 @@ func main() {
 	rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
 
 	for rows.Next() {
-		rows.Scan(&song.id,&song.artist,&song.song,&song.genre,&song.length)
-		fmt.Println(song)
+		rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre,&song.Length)
+		jsonOut, _ := json.Marshal(song)
+
+		fmt.Fprintln(w,string(jsonOut))
 	}
 }
 
@@ -54,10 +60,10 @@ func main() {
 	//	fmt.Fprintln(w,err)
 
 //}
-//
-//func main() {
-//	mux := goji.NewMux()
-//	mux.HandleFunc(pat.Get("/hello/:name"), hello)
-//
-//	http.ListenAndServe("localhost:8000", mux)
-//}
+
+func main() {
+	mux := goji.NewMux()
+	mux.HandleFunc(pat.Get("/songs"), getSongs)
+
+	http.ListenAndServe("localhost:8000", mux)
+}
