@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"goji.io"
 	"goji.io/pat"
@@ -31,15 +32,27 @@ func newSong() *Song{
 
 func main() {
 	mux := goji.NewMux()
-	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
-	mux.HandleFunc(pat.Get("/genres"), getAllGenres)
-	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getSongsByArtist)
-	mux.HandleFunc(pat.Get("/songs/:name"), getSongsByName)
-	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getSongsByGenre)
-	mux.HandleFunc(pat.Get("/genres/summary"), getAllGenresSummary)
+	mux.HandleFunc(pat.Get("/"), homepage)
+
+	mux.HandleFunc(pat.Get("/api/songs"), getAllSongs)
+	mux.HandleFunc(pat.Get("/api/genres"), getAllGenres)
+	mux.HandleFunc(pat.Get("/api/songs/artist/:artist"), getSongsByArtist)
+	mux.HandleFunc(pat.Get("/api/songs/:name"), getSongsByName)
+	mux.HandleFunc(pat.Get("/api/songs/genre/:genre"), getSongsByGenre)
+	mux.HandleFunc(pat.Get("/api/genres/summary"), getAllGenresSummary)
+	mux.HandleFunc(pat.Get("/api/songs/byLength/:min/:max"), getSongsByLength)
 
 
-	log.Fatal(http.ListenAndServe("localhost:8000", mux))
+
+	log.Fatal(http.ListenAndServe("localhost:8005", mux))
+}
+
+func homepage(w http.ResponseWriter,r *http.Request)  {
+	fmt.Fprintln(w,"http://localhost:8005/api/songs/artist/{artistName}")
+	fmt.Fprintln(w,"http://localhost:8005/api/songs/{songName}")
+	fmt.Fprintln(w,"http://localhost:8005/api/songs/genre/{genreName}")
+	fmt.Fprintln(w,"http://localhost:8005/api/genres/summary/{genreName}")
+	fmt.Fprintln(w,"http://localhost:8005/api/songs/byLength/{min}/{max}")
 }
 
 const (
@@ -181,7 +194,7 @@ func getSongsByGenre(w http.ResponseWriter,r *http.Request){
 func getAllGenresSummary(w http.ResponseWriter,r *http.Request)  {
 	w.Header().Set("Content-Type","application/json")
 	db := initDb()
-	
+
 	var genres []struct{
 		Id int
 		Name string
@@ -204,5 +217,30 @@ func getAllGenresSummary(w http.ResponseWriter,r *http.Request)  {
 	}
 
 	json.NewEncoder(w).Encode(genres)
+	db.Close()
+}
+
+func getSongsByLength(w http.ResponseWriter,r *http.Request)  {
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+
+	var songs []Song
+
+	min := pat.Param(r,"min")
+	max := pat.Param(r,"max")
+
+	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
+								"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
+								"where length>=? and length<=?",min,max)
+	for rows.Next() {
+		song := newSong()
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
+		if err == nil{
+			songs = append(songs, *song)
+		}
+	}
+
+	json.NewEncoder(w).Encode(songs)
 	db.Close()
 }
