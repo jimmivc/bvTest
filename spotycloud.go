@@ -38,7 +38,7 @@ func main() {
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
 	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getSongsByArtist)
-	mux.HandleFunc(pat.Get("/songs/name/:name"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/:name"), getSongsByName)
 	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getAllSongs)
 	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
 
@@ -97,44 +97,38 @@ func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 			songs = append(songs, *song)
 		}
 	}
-
-	json.NewEncoder(w).Encode(songs)
+	if len(songs)>0 {
+		json.NewEncoder(w).Encode(songs)
+	}else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 	db.Close()
 }
 
 
 func getSongsByName(w http.ResponseWriter,r *http.Request)  {
-	//w.Header().Set("Content-Type","application/json")
-	//db, _ := sql.Open("sqlite3","./db/jrdd.db")
-	//
-	////var artist string
-	//var song Song
-	//rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
-	//
-	//for rows.Next() {
-	//
-	//	rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre,&song.Length)
-	//	jsonOut, _ := json.Marshal(song)
-	//
-	//	fmt.Fprintln(w,string(jsonOut))
-	//}
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+
+	var songs []Song
+
+	songName := pat.Param(r, "name")
+	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
+		"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
+		"where lower(song) like lower(?)",songName)
+
+	song := newSong()
+
+	for rows.Next(){
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id, &song.Genre.Name,&song.Length)
+		if err == nil{
+			songs = append(songs, *song)
+		}
+	}
+	if len(songs)>0 {
+		json.NewEncoder(w).Encode(songs)
+	}else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+	db.Close()
 }
-
-//func hello(w http.ResponseWriter, r *http.Request) {
-	//name := pat.Param(r, "name")
-	//fmt.Fprintf(w, "Hello, %s!", name)
-
-	//db, _ := sql.Open("sqlite3","./db/jrdd.db")
-
-	//var artist string
-	//
-	//rows, _ := db.Query("Select artist from Songs")
-	//
-	//for rows.Next() {
-	//	rows.Scan(&artist)
-	//	fmt.Fprintln(w,artist)
-	//}
-	//err := db.QueryRow("SELECT id,artist,song,genre,length from Songs where id = 2")
-	//	fmt.Fprintln(w,err)
-
-//}
