@@ -3,43 +3,85 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"goji.io"
 	"goji.io/pat"
+	"log"
 	"net/http"
 )
 
 type Song struct {
-	Id int `json:"id"`
-	Artist string `json:"artist"`
-	Song string `json:"song"`
-	Genre int `json:"genre"`
-	Length int `json:"length"`
+	Id 		int `json:"id"`
+	Artist 	string `json:"artist"`
+	Song 	string `json:"song"`
+	Genre 	*Genre `json:"genre"`
+	Length 	int `json:"length"`
 }
 
-//func (s Song) Scan(src interface{})error{
-//	switch t := src.(type) {
-//		case[]byte:
-//			return json.Unmarshal(t,&s)
-//	default:
-//		return errors.New("Invalid type")
-//	}
-//}
+type Genre struct{
+	Id		int `json:"id"`
+	Name	string `json:"name"`
+}
 
-func getSongs(w http.ResponseWriter,r *http.Request) {
+func main() {
+	mux := goji.NewMux()
+	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/name/:name"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getAllSongs)
+	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
+
+	log.Fatal(http.ListenAndServe("localhost:8000", mux))
+}
+
+
+func getAllSongs(w http.ResponseWriter,r *http.Request) {
+	w.Header().Set("Content-Type","application/json")
 	db, _ := sql.Open("sqlite3","./db/jrdd.db")
-
 	//var artist string
-	var song Song
+	song := newSong()
+	var songs []Song
+
 	rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
 
 	for rows.Next() {
-		rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre,&song.Length)
-		jsonOut, _ := json.Marshal(song)
 
-		fmt.Fprintln(w,string(jsonOut))
+		rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
+		songs= append(songs, *song)
 	}
+	json.NewEncoder(w).Encode(songs)
+
+}
+func newSong() *Song{
+	return &Song{
+		0,
+		"",
+		"",
+		&Genre{},
+		0,
+	}
+}
+func getSongByArtist(w http.ResponseWriter,r *http.Request){
+	//artist := pat.Param(r,"artist")
+
+}
+
+
+func getSongsByName(w http.ResponseWriter,r *http.Request)  {
+	//w.Header().Set("Content-Type","application/json")
+	//db, _ := sql.Open("sqlite3","./db/jrdd.db")
+	//
+	////var artist string
+	//var song Song
+	//rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
+	//
+	//for rows.Next() {
+	//
+	//	rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre,&song.Length)
+	//	jsonOut, _ := json.Marshal(song)
+	//
+	//	fmt.Fprintln(w,string(jsonOut))
+	//}
 }
 
 //func hello(w http.ResponseWriter, r *http.Request) {
@@ -60,10 +102,3 @@ func getSongs(w http.ResponseWriter,r *http.Request) {
 	//	fmt.Fprintln(w,err)
 
 //}
-
-func main() {
-	mux := goji.NewMux()
-	mux.HandleFunc(pat.Get("/songs"), getSongs)
-
-	http.ListenAndServe("localhost:8000", mux)
-}
