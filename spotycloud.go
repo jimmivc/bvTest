@@ -23,35 +23,7 @@ type Genre struct{
 	Name	string `json:"name"`
 }
 
-func main() {
-	mux := goji.NewMux()
-	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
-	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getAllSongs)
-	mux.HandleFunc(pat.Get("/songs/name/:name"), getAllSongs)
-	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getAllSongs)
-	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
 
-	log.Fatal(http.ListenAndServe("localhost:8000", mux))
-}
-
-
-func getAllSongs(w http.ResponseWriter,r *http.Request) {
-	w.Header().Set("Content-Type","application/json")
-	db, _ := sql.Open("sqlite3","./db/jrdd.db")
-	//var artist string
-	song := newSong()
-	var songs []Song
-
-	rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
-
-	for rows.Next() {
-
-		rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
-		songs= append(songs, *song)
-	}
-	json.NewEncoder(w).Encode(songs)
-
-}
 func newSong() *Song{
 	return &Song{
 		0,
@@ -61,9 +33,70 @@ func newSong() *Song{
 		0,
 	}
 }
-func getSongByArtist(w http.ResponseWriter,r *http.Request){
-	//artist := pat.Param(r,"artist")
 
+func main() {
+	mux := goji.NewMux()
+	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getSongsByArtist)
+	mux.HandleFunc(pat.Get("/songs/name/:name"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getAllSongs)
+	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
+
+	log.Fatal(http.ListenAndServe("localhost:8000", mux))
+}
+
+const (
+	dbdriver = "sqlite3"
+	dbsource = "./db/jrdd.db"
+)
+
+func initDb() *sql.DB  {
+	db,err := sql.Open(dbdriver,dbsource)
+	if err != nil { panic(err) }
+	if db == nil { panic("db nil") }
+	return db
+}
+
+func getAllSongs(w http.ResponseWriter,r *http.Request) {
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+
+	//var artist string
+	var songs []Song
+
+	rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
+	song := newSong()
+	for rows.Next() {
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
+		if err == nil{
+			songs = append(songs, *song)
+		}
+	}
+
+	json.NewEncoder(w).Encode(songs)
+	db.Close()
+}
+func getSongsByArtist(w http.ResponseWriter,r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	db, _ := sql.Open("sqlite3","./db/jrdd.db")
+
+	var songs []Song
+
+	artist := pat.Param(r, "artist")
+	rows, _ := db.Query("Select id,artist,song,genre,length from Songs where lower(artist) like lower(?)",artist)
+
+	song := newSong()
+
+	for rows.Next(){
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
+		if err == nil{
+			songs = append(songs, *song)
+		}
+	}
+
+	json.NewEncoder(w).Encode(songs)
+	db.Close()
 }
 
 
