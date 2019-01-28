@@ -23,24 +23,21 @@ type Genre struct{
 	Name	string `json:"name"`
 }
 
-
 func newSong() *Song{
 	return &Song{
-		0,
-		"",
-		"",
-		&Genre{},
-		0,
+		Genre: new(Genre),
 	}
 }
 
 func main() {
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
+	mux.HandleFunc(pat.Get("/genres"), getAllGenres)
 	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getSongsByArtist)
 	mux.HandleFunc(pat.Get("/songs/:name"), getSongsByName)
 	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getSongsByGenre)
-	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
+	mux.HandleFunc(pat.Get("/genres/summary"), getAllGenresSummary)
+
 
 	log.Fatal(http.ListenAndServe("localhost:8000", mux))
 }
@@ -66,21 +63,39 @@ func getAllSongs(w http.ResponseWriter,r *http.Request) {
 
 	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
 								"from Songs INNER JOIN Genres On Songs.genre = Genres.id")
-	song := newSong()
 	for rows.Next() {
-		var genre Genre
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
+		song := newSong()
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
 		if err == nil{
-			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
 
-	song.Genre.Name = "DAMMM"
-
 	json.NewEncoder(w).Encode(songs)
 	db.Close()
 }
+
+func getAllGenres(w http.ResponseWriter,r *http.Request) {
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+
+	//var artist string
+	var genres []Genre
+
+	rows, _ := db.Query("select id, name from Genres")
+	for rows.Next() {
+		var genre = new(Genre)
+		err := rows.Scan(&genre.Id,&genre.Name)
+		if err == nil{
+			genres = append(genres, *genre)
+		}
+	}
+
+	json.NewEncoder(w).Encode(genres)
+	db.Close()
+}
+
 func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 	w.Header().Set("Content-Type","application/json")
 	db := initDb()
@@ -90,15 +105,14 @@ func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 	artist := pat.Param(r, "artist")
 	rows, _ := db.Query("Select  Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
 								"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
-								"where lower(artist) like lower(?)",artist)
+								"where lower(artist) like lower('%'||?||'%')",artist)
 
-	song := newSong()
 
 	for rows.Next(){
-		var genre Genre
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
+		song := newSong()
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
 		if err == nil{
-			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
@@ -120,15 +134,14 @@ func getSongsByName(w http.ResponseWriter,r *http.Request)  {
 	songName := pat.Param(r, "name")
 	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
 		"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
-		"where lower(song) like lower(?)",songName)
+		"where lower(song) like lower('%'||?||'%')",songName)
 
-	song := newSong()
 
 	for rows.Next(){
-		var genre Genre
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
+		song := newSong()
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
 		if err == nil{
-			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
@@ -147,14 +160,13 @@ func getSongsByGenre(w http.ResponseWriter,r *http.Request){
 	genre := pat.Param(r, "genre")
 	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
 		"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
-		"where lower(Genres.name) like lower(?)",genre)
+		"where lower(Genres.name) like lower('%'||?||'%')",genre)
 
-	song := newSong()
 	for rows.Next(){
-		var genre Genre
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
+		song := newSong()
+
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
 		if err == nil{
-			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
@@ -163,5 +175,34 @@ func getSongsByGenre(w http.ResponseWriter,r *http.Request){
 	}else {
 		w.WriteHeader(http.StatusNotFound)
 	}
+	db.Close()
+}
+
+func getAllGenresSummary(w http.ResponseWriter,r *http.Request)  {
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+	
+	var genres []struct{
+		Id int
+		Name string
+		CantSongs int
+		Length int
+	}
+
+	rows, _ := db.Query("select a.id,a.name,COUNT(b.id) as songs,SUM(b.length) as length from Genres as a join Songs as b on a.id = b.genre group by a.id")
+	for rows.Next() {
+		var summary struct{
+			Id int
+			Name string
+			CantSongs int
+			Length int
+		}
+		err := rows.Scan(&summary.Id,&summary.Name,&summary.CantSongs,&summary.Length)
+		if err == nil{
+			genres = append(genres,summary)
+		}
+	}
+
+	json.NewEncoder(w).Encode(genres)
 	db.Close()
 }
