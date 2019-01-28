@@ -64,11 +64,12 @@ func getAllSongs(w http.ResponseWriter,r *http.Request) {
 	//var artist string
 	var songs []Song
 
-	rows, _ := db.Query("Select id,artist,song,genre,length from Songs")
+	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
+								"from Songs INNER JOIN Genres On Songs.genre = Genres.id")
 	song := newSong()
 	for rows.Next() {
 
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
 		if err == nil{
 			songs = append(songs, *song)
 		}
@@ -79,17 +80,19 @@ func getAllSongs(w http.ResponseWriter,r *http.Request) {
 }
 func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 	w.Header().Set("Content-Type","application/json")
-	db, _ := sql.Open("sqlite3","./db/jrdd.db")
+	db := initDb()
 
 	var songs []Song
 
 	artist := pat.Param(r, "artist")
-	rows, _ := db.Query("Select id,artist,song,genre,length from Songs where lower(artist) like lower(?)",artist)
+	rows, _ := db.Query("Select  Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
+								"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
+								"where lower(artist) like lower(?)",artist)
 
 	song := newSong()
 
 	for rows.Next(){
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Length)
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id, &song.Genre.Name,&song.Length)
 		if err == nil{
 			songs = append(songs, *song)
 		}
