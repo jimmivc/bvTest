@@ -39,7 +39,7 @@ func main() {
 	mux.HandleFunc(pat.Get("/songs"), getAllSongs)
 	mux.HandleFunc(pat.Get("/songs/artist/:artist"), getSongsByArtist)
 	mux.HandleFunc(pat.Get("/songs/:name"), getSongsByName)
-	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getAllSongs)
+	mux.HandleFunc(pat.Get("/songs/genre/:genre"), getSongsByGenre)
 	mux.HandleFunc(pat.Get("/genre/:name"), getAllSongs)
 
 	log.Fatal(http.ListenAndServe("localhost:8000", mux))
@@ -68,12 +68,15 @@ func getAllSongs(w http.ResponseWriter,r *http.Request) {
 								"from Songs INNER JOIN Genres On Songs.genre = Genres.id")
 	song := newSong()
 	for rows.Next() {
-
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id,&song.Genre.Name,&song.Length)
+		var genre Genre
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
 		if err == nil{
+			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
+
+	song.Genre.Name = "DAMMM"
 
 	json.NewEncoder(w).Encode(songs)
 	db.Close()
@@ -92,8 +95,10 @@ func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 	song := newSong()
 
 	for rows.Next(){
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id, &song.Genre.Name,&song.Length)
+		var genre Genre
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
 		if err == nil{
+			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
@@ -120,8 +125,36 @@ func getSongsByName(w http.ResponseWriter,r *http.Request)  {
 	song := newSong()
 
 	for rows.Next(){
-		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&song.Genre.Id, &song.Genre.Name,&song.Length)
+		var genre Genre
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
 		if err == nil{
+			song.Genre = &genre
+			songs = append(songs, *song)
+		}
+	}
+	if len(songs)>0 {
+		json.NewEncoder(w).Encode(songs)
+	}else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+	db.Close()
+}
+
+func getSongsByGenre(w http.ResponseWriter,r *http.Request){
+	w.Header().Set("Content-Type","application/json")
+	db := initDb()
+	var songs []Song
+	genre := pat.Param(r, "genre")
+	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
+		"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
+		"where lower(Genres.name) like lower(?)",genre)
+
+	song := newSong()
+	for rows.Next(){
+		var genre Genre
+		err := rows.Scan(&song.Id,&song.Artist,&song.Song,&genre.Id,&genre.Name,&song.Length)
+		if err == nil{
+			song.Genre = &genre
 			songs = append(songs, *song)
 		}
 	}
