@@ -12,7 +12,7 @@ import (
 )
 
 type Song struct {
-	Id 		int `json:"id"`
+	Id 		int `json:"-"`
 	Artist 	string `json:"artist"`
 	Song 	string `json:"song"`
 	Genre 	*Genre `json:"genre"`
@@ -20,7 +20,7 @@ type Song struct {
 }
 
 type Genre struct{
-	Id		int `json:"id"`
+	Id		int `json:"-"`
 	Name	string `json:"name"`
 }
 

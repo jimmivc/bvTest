@@ -34,7 +34,7 @@ func TestFindSongByArtist(t *testing.T)  {
 	}
 
 	// Check the response body is what we expect.
-	expected := `{"id":10,"artist":"The Black Eyed Peas","song":"I Gotta Feeling","genre":{"id":3,"name":"Rap"},"length":219}`
+	expected := `{"artist":"The Black Eyed Peas","song":"I Gotta Feeling","genre":{"name":"Rap"},"length":219}`
 
 	if !strings.Contains(rr.Body.String(),expected) {
 		t.Errorf("handler returned unexpected body: got \n%v want \n%v",
@@ -60,7 +60,7 @@ func TestFindSongByName(t *testing.T)  {
 			status, http.StatusOK)
 	}
 
-	expected := `{"id":11,"artist":"Los Del Rio","song":"Macarena","genre":{"id":9,"name":"Pop"},"length":159}`
+	expected := `{"artist":"Los Del Rio","song":"Macarena","genre":{"name":"Pop"},"length":159}`
 
 	if !strings.Contains(rr.Body.String(),expected) {
 		t.Errorf("handler returned unexpected body: got \n%v want \n%v",
@@ -85,7 +85,7 @@ func TestFindSongByGenre(t *testing.T)  {
 			status, http.StatusOK)
 	}
 
-	expected := `{"id":4,"artist":"Los Waldners","song":"Horacio","genre":{"id":7,"name":"Latin Pop Rock"},"length":165}`
+	expected := `{"artist":"Los Waldners","song":"Horacio","genre":{"name":"Latin Pop Rock"},"length":165}`
 
 	if !strings.Contains(rr.Body.String(),expected) {
 		t.Errorf("handler returned unexpected body: got \n%v want \n%v",
@@ -129,7 +129,7 @@ func TestFindSongByLength(t *testing.T)  {
 			status, http.StatusOK)
 	}
 
-	expected := `{"id":9,"artist":"LMFAO","song":"Party Rock Anthem","genre":{"id":3,"name":"Rap"},"length":189}`
+	expected := `{"artist":"LMFAO","song":"Party Rock Anthem","genre":{"name":"Rap"},"length":189}`
 
 	if !strings.Contains(rr.Body.String(),expected) {
 		t.Errorf("handler returned unexpected body: got \n%v want \n%v",
