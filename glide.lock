@@ -1,10 +1,10 @@
 hash: f8a5c963cad275d5284a17cd7f1593bdd7ca5307519a7b4fffea753b79978a8a
-updated: 2019-01-25T19:07:10.9361376-06:00
+updated: 2019-01-28T22:41:27.5523718-06:00
 imports:
 - name: github.com/mattn/go-sqlite3
   version: 3fa1c550ffa69b74dc4bfd5109b4e218f32c87cf
 - name: goji.io
-  version: 0eb45c4b63bfd2c78f70b22b0cfbc65f58b78e73
+  version: 490b001d03d16a116d7c44d95d216c69a1aae798
   subpackages:
   - internal
   - pat

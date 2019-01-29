@@ -1,8 +1,6 @@
 package: bvTest
 import:
 - package: github.com/mattn/go-sqlite3
-  version: ~1.10.0
 - package: goji.io
-  version: ~3.0.0
   subpackages:
   - pat
