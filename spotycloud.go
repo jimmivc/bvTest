@@ -34,8 +34,8 @@ func main() {
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/"), homepage)
 
-	mux.HandleFunc(pat.Get("/api/songs"), getAllSongs)
-	mux.HandleFunc(pat.Get("/api/genres"), getAllGenres)
+	//mux.HandleFunc(pat.Get("/api/songs"), getAllSongs)
+	//mux.HandleFunc(pat.Get("/api/genres"), getAllGenres)
 	mux.HandleFunc(pat.Get("/api/songs/artist/:artist"), getSongsByArtist)
 	mux.HandleFunc(pat.Get("/api/songs/:name"), getSongsByName)
 	mux.HandleFunc(pat.Get("/api/songs/genre/:genre"), getSongsByGenre)
