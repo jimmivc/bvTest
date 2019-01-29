@@ -51,7 +51,7 @@ func homepage(w http.ResponseWriter,r *http.Request)  {
 	fmt.Fprintln(w,"http://localhost:8005/api/songs/artist/{artistName}")
 	fmt.Fprintln(w,"http://localhost:8005/api/songs/{songName}")
 	fmt.Fprintln(w,"http://localhost:8005/api/songs/genre/{genreName}")
-	fmt.Fprintln(w,"http://localhost:8005/api/genres/summary/{genreName}")
+	fmt.Fprintln(w,"http://localhost:8005/api/genres/summary")
 	fmt.Fprintln(w,"http://localhost:8005/api/songs/byLength/{min}/{max}")
 }
 
@@ -196,21 +196,19 @@ func getAllGenresSummary(w http.ResponseWriter,r *http.Request)  {
 	db := initDb()
 
 	var genres []struct{
-		Id int
 		Name string
 		CantSongs int
 		Length int
 	}
 
-	rows, _ := db.Query("select a.id,a.name,COUNT(b.id) as songs,SUM(b.length) as length from Genres as a join Songs as b on a.id = b.genre group by a.id")
+	rows, _ := db.Query("select a.name,COUNT(b.id) as songs,SUM(b.length) as length from Genres as a join Songs as b on a.id = b.genre group by a.name")
 	for rows.Next() {
 		var summary struct{
-			Id int
 			Name string
 			CantSongs int
 			Length int
 		}
-		err := rows.Scan(&summary.Id,&summary.Name,&summary.CantSongs,&summary.Length)
+		err := rows.Scan(&summary.Name,&summary.CantSongs,&summary.Length)
 		if err == nil{
 			genres = append(genres,summary)
 		}
