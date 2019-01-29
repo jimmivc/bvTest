@@ -6,7 +6,7 @@ Information and requirements
 - Developed in Golang v1.9.7
 - install gcc if you are using windows -> http://tdm-gcc.tdragon.net/download
 - you must have Glide to install dependencies
-- 
+
 
 ###### `Installation steps`
 1 - Clone Respository using `go get github.com/jimmivc/bvTest`
