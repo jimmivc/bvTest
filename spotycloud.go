@@ -94,8 +94,6 @@ func getSongsByName(w http.ResponseWriter,r *http.Request)  {
 
 
 	songs := mapSongsByQueryResult(rows)
-	fmt.Println(&songs)
-	fmt.Println(songs)
 
 	if len(songs)>0 {
 		json.NewEncoder(w).Encode(songs)
@@ -176,6 +174,5 @@ func mapSongsByQueryResult(rows *sql.Rows) []Song  {
 		}
 	}
 
-	fmt.Println(songs)
 	return songs
 }
