@@ -9,6 +9,7 @@ import (
 	"goji.io/pat"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Song struct {
@@ -77,7 +78,7 @@ func getSongsByArtist(w http.ResponseWriter,r *http.Request){
 	if len(songs)>0 {
 		json.NewEncoder(w).Encode(songs)
 	}else {
-		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w,"Not Found")
 	}
 	db.Close()
 }
@@ -93,13 +94,7 @@ func getSongsByName(w http.ResponseWriter,r *http.Request)  {
 		"where lower(song) like lower('%'||?||'%')",songName)
 
 
-	songs := mapSongsByQueryResult(rows)
-
-	if len(songs)>0 {
-		json.NewEncoder(w).Encode(songs)
-	}else {
-		w.WriteHeader(http.StatusNotFound)
-	}
+	searchSongsListResponse(mapSongsByQueryResult(rows),w)
 	db.Close()
 }
 
@@ -111,12 +106,8 @@ func getSongsByGenre(w http.ResponseWriter,r *http.Request){
 		"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
 		"where lower(Genres.name) like lower('%'||?||'%')",genre)
 
-	songs:= mapSongsByQueryResult(rows)
-	if len(songs)>0 {
-		json.NewEncoder(w).Encode(songs)
-	}else {
-		fmt.Fprint(w,"Not Found")
-	}
+	searchSongsListResponse(mapSongsByQueryResult(rows),w)
+
 	db.Close()
 }
 
@@ -154,13 +145,26 @@ func getSongsByLength(w http.ResponseWriter,r *http.Request)  {
 	min := pat.Param(r,"min")
 	max := pat.Param(r,"max")
 
+	minimus,errmin := strconv.Atoi(min)
+	maximus,errmax := strconv.Atoi(max);
+
+	if errmin != nil || errmax !=nil{
+		fmt.Fprint(w,"Input format error")
+		return
+	}
+
+	if maximus-minimus<0{
+		fmt.Fprint(w,"Invalid Range (min/max)")
+		return
+	}
+
+
 	rows, _ := db.Query("Select Songs.id,Songs.artist,Songs.song,Genres.id,Genres.name,Songs.length " +
 								"from Songs INNER JOIN Genres On Songs.genre = Genres.id " +
 								"where length>=? and length<=?",min,max)
 
-	songs := mapSongsByQueryResult(rows)
+	searchSongsListResponse(mapSongsByQueryResult(rows),w)
 
-	json.NewEncoder(w).Encode(songs)
 	db.Close()
 }
 
@@ -175,4 +179,12 @@ func mapSongsByQueryResult(rows *sql.Rows) []Song  {
 	}
 
 	return songs
+}
+
+func searchSongsListResponse(songs []Song, w http.ResponseWriter){
+	if len(songs)>0 {
+		json.NewEncoder(w).Encode(songs)
+	}else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }
